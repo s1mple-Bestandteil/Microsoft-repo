@@ -1,5 +1,5 @@
 Parser:
-  Title: Network Session ASIM parser for Vectra AI Streams
+  Title: Network Session ASIM filtering parser for Vectra AI Streams
   Version: '0.1'
   LastUpdated: Mar 8, 2021
 Product:
@@ -13,15 +13,48 @@ References:
   - Title: ASIM
     Link: https://aka.ms/AboutASIM
 Description: |
-  This ASIM parser supports normalizing Vectra AI Streams logs to the ASIM Network Session normalized schema.
-ParserName: ASimNetworkSessionVectraAI
-EquivalentBuiltInParser: _ASim_NetworkSession_VectraAI
+  This ASIM parser supports filtering and normalizing Vectra AI Streams logs to the ASIM Network Session normalized schema.
+ParserName: vimNetworkSessionVectraAI
+EquivalentBuiltInParser: _Im_NetworkSession_VectraAI
 ParserParams:
+  - Name: starttime
+    Type: datetime
+    Default: datetime(null)
+  - Name: endtime
+    Type: datetime
+    Default: datetime(null)
+  - Name: srcipaddr_has_any_prefix
+    Type: dynamic
+    Default: dynamic([])
+  - Name: dstipaddr_has_any_prefix
+    Type: dynamic
+    Default: dynamic([])
+  - Name: dstportnumber
+    Type: int
+    Default: int(null)
+  - Name: hostname_has_any
+    Type: dynamic
+    Default: dynamic([])
+  - Name: dvcaction
+    Type: dynamic
+    Default: dynamic([])
+  - Name: eventresult
+    Type: string
+    Default: '*'
   - Name: disabled
     Type: bool
     Default: false
 ParserQuery: |
-  let parser = (disabled:bool=false) 
+  let parser = (
+    starttime:datetime=datetime(null), 
+    endtime:datetime=datetime(null), 
+    srcipaddr_has_any_prefix:dynamic=dynamic([]), 
+    dstipaddr_has_any_prefix:dynamic=dynamic([]), 
+    dstportnumber:int=int(null), 
+    hostname_has_any:dynamic=dynamic([]), 
+    dvcaction:dynamic=dynamic([]), 
+    eventresult:string='*', 
+    disabled:bool=false)
   {
     let NetworkDirectionLookup = datatable(local_orig_b:bool, local_resp_b:bool, NetworkDirection:string)[
       false, true, 'Inbound',
@@ -30,6 +63,26 @@ ParserQuery: |
       false, false, 'Local'];
     VectraStream_CL
     | where metadata_type_s == 'metadata_isession'
+      // -- Pre-filtering:
+        | where
+            eventresult  in ("*", "Success") 
+            and array_length(dvcaction) == 0
+            and (starttime == datetime(null) or TimeGenerated >= starttime)
+            and (endtime == datetime(null) or TimeGenerated <= endtime)
+            and (
+                array_length(srcipaddr_has_any_prefix) == 0 
+                or has_any_ipv4_prefix(id_orig_h_s,srcipaddr_has_any_prefix)
+            )
+            and (
+                array_length(dstipaddr_has_any_prefix) == 0 
+                or has_any_ipv4_prefix(id_resp_h_s,dstipaddr_has_any_prefix)
+            )
+            and (dstportnumber==int(null) or id_resp_p_d == dstportnumber)
+            and (
+                array_length(hostname_has_any)==0 
+                or Computer has_any (hostname_has_any)
+            )
+        // -- End pre-filtering
     | project-rename
         DstIpAddr = id_resp_h_s,
         Dvc = hostname_s,
@@ -76,4 +129,4 @@ ParserQuery: |
     | project-away
         *_d, *_s, *_b, *_g
   };
-  parser (disabled)
+ parser (starttime, endtime, srcipaddr_has_any_prefix, dstipaddr_has_any_prefix, dstportnumber, hostname_has_any, dvcaction, eventresult, disabled)
