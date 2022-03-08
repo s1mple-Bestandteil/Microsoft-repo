@@ -1,0 +1,75 @@
+Parser:
+  Title: DNS ASIM parser for Vectra AI Steams
+  Version: '0.1'
+  LastUpdated: Mar 8 2022
+Product:
+  Name: Vectra AI Streams
+Normalization:
+  Schema: Dns
+  Version: '0.1.3'
+References:
+- Title: ASIM DNS Schema
+  Link: https://aka.ms/ASimDnsDoc
+- Title: ASIM
+  Link: https://aka.ms/AboutASIM
+Description: |
+  This ASIM parser supports normalizing Vectra AI Steams logs to the ASIM DNS normalized schema.
+ParserName: ASimDnsVectraAI
+EquivalentBuiltInParser: _ASim_Dns_VectraAI
+ParserParams:
+  - Name: disabled
+    Type: bool
+    Default: false
+ParserQuery: |
+  let parser = (disabled:bool=false) {
+    let NetworkProtocolLookup = datatable(proto_d:real, NetworkProtocol:string)[
+        6, 'TCP',
+        17, 'UDP'];
+    VectraStream_CL
+    | where metadata_type_s == 'metadata_dns'
+    | project-rename
+        DnsFlagsAuthoritative = AA_b,
+        DnsFlagsRecursionAvailable = RA_b,
+        DnsFlagsRecursionDesired = RD_b,
+        DnsFlagsTruncated = TC_b,
+        DnsResponseName = answers_s,
+        DnsQuery = query_s,
+        DnsQueryClassName = qclass_name_s,
+        DnsQueryTypeName = qtype_name_s,
+        DstHostname = resp_hostname_s,
+        DstIpAddr = id_resp_h_s,
+        Dvc = hostname_s,
+        DnsSessionId = community_id_s,
+        SrcHostname = orig_hostname_s,
+        SrcIpAddr = id_orig_h_s
+    | extend
+        DnsResponseCode = toint(rcode_d),
+        DnsResponseCodeName = toupper(rcode_name_s),
+        DnsQueryClass = toint(qclass_d),
+        DnsQueryType = toint(qtype_d),
+        Domain = DnsQuery,
+        Dst = DstIpAddr,
+        DstPortNumber = toint(id_resp_p_d),
+        EventCount = toint(1),
+        EventEndTime = unixtime_milliseconds_todatetime(ts_d),
+        EventOriginalSubType = split(metadata_type_s, '_')[1],
+        EventProduct = 'Vectra Stream',
+        EventResult = case(tolong(rcode_d) > 0, "Failure", "Success"),
+        EventSchema = 'Dns',
+        EventSchemaVersion='0.1.3',
+        EventType = 'Query',
+        EventVendor = 'Vectra AI',
+        Hostname = DstHostname,
+        IpAddr = SrcIpAddr,
+        Src = SrcIpAddr,
+        SrcPortNumber = toint(id_orig_p_d),
+        TransactionIdHex = tostring(toint(trans_id_d))
+    | extend
+        EventResultDetails = DnsResponseCodeName,
+        EventStartTime = EventEndTime,
+        SessionId = DnsSessionId
+    | lookup NetworkProtocolLookup on proto_d
+    | project-away
+        *_d, *_s, *_b, *_g
+      };
+  parser(disabled)

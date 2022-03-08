@@ -1,7 +1,7 @@
 Parser:
   Title: DNS activity ASIM schema function
-  Version: '0.3'
-  LastUpdated: Jan 17 2022
+  Version: '0.4'
+  LastUpdated: Mar 8 2022
 Product:
   Name: Microsoft
 Normalization:
@@ -108,7 +108,7 @@ ParserQuery: |
   , DnsFlagsCheckingDisabled:bool
   , DnsFlagsRecursionAvailable:bool
   , DnsFlagsRecursionDesired:bool
-  , DnsFlagsTruncates:bool
+  , DnsFlagsTruncated:bool
   , DnsFlagsZ:bool
   , DnsSessionId:string
   , SessionId: string
