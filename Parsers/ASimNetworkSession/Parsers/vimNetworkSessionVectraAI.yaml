@@ -84,18 +84,18 @@ ParserQuery: |
                 or Computer has_any (hostname_has_any)
             )
         // -- End pre-filtering
-      | project-rename
+  | project-rename
         DstIpAddr = id_resp_h_s,
         DvcDescription = hostname_s,
         DstDescription = resp_hostname_s,
         SrcDescription = orig_hostname_s,
-        NetworkApplicationProtocol = service_s,
-        NetworkProtocol = protoName_s,
         NetworkSessionId = community_id_s,
         SrcIpAddr = id_orig_h_s
     | extend
         DstHostname = iff (DstDescription startswith "IP-" or not(DstDescription matches regex HostnameRegex), "", DstDescription),
         SecHostname = iff (SrcDescription startswith "IP-" or not(SrcDescription matches regex HostnameRegex), "", SrcDescription),
+        NetworkApplicationProtocol = toupper(service_s),
+        NetworkProtocol = toupper(protoName_s),
         Dst = DstIpAddr,
         DstBytes = tolong(resp_ip_bytes_d),
         DstPackets = tolong(resp_pkts_d),
@@ -131,4 +131,4 @@ ParserQuery: |
     | project-away
         *_d, *_s, *_b, *_g
   };
-  parser (starttime, endtime, srcipaddr_has_any_prefix, dstipaddr_has_any_prefix, dstportnumber, hostname_has_any, dvcaction, eventresult, disabled)
+  parser  (starttime, endtime, srcipaddr_has_any_prefix, dstipaddr_has_any_prefix, dstportnumber, hostname_has_any, dvcaction, eventresult, disabled)

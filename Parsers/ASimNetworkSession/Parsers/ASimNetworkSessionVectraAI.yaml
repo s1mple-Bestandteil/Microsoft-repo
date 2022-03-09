@@ -36,13 +36,13 @@ ParserQuery: |
         DvcDescription = hostname_s,
         DstDescription = resp_hostname_s,
         SrcDescription = orig_hostname_s,
-        NetworkApplicationProtocol = service_s,
-        NetworkProtocol = protoName_s,
         NetworkSessionId = community_id_s,
         SrcIpAddr = id_orig_h_s
     | extend
         DstHostname = iff (DstDescription startswith "IP-" or not(DstDescription matches regex HostnameRegex), "", DstDescription),
         SecHostname = iff (SrcDescription startswith "IP-" or not(SrcDescription matches regex HostnameRegex), "", SrcDescription),
+        NetworkApplicationProtocol = toupper(service_s),
+        NetworkProtocol = toupper(protoName_s),
         Dst = DstIpAddr,
         DstBytes = tolong(resp_ip_bytes_d),
         DstPackets = tolong(resp_pkts_d),
