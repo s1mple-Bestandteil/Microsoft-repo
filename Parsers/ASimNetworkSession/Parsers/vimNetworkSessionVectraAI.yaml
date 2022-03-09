@@ -89,8 +89,7 @@ ParserQuery: |
         NetworkApplicationProtocol = service_s,
         NetworkProtocol = protoName_s,
         NetworkSessionId = community_id_s,
-        SrcIpAddr = id_orig_h_s,
-        SrcUserId = username_s
+        SrcIpAddr = id_orig_h_s
     | extend
         DstHostname = iff (resp_hostname_s startswith "IP-", "", resp_hostname_s),
         SrcHostname = iff (orig_hostname_s startswith "IP-", "", orig_hostname_s),
